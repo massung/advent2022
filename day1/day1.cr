@@ -2,7 +2,7 @@ elves = [] of Int32
 elf = 0
 
 File.each_line("data.txt") do |line|
-  if line != ""
+  if !line.empty?
     elf += line.to_i
   else
     elves << elf
