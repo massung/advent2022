@@ -32,12 +32,13 @@ class DirTree
     @dirs[-1] += size unless @dirs.empty?
   end
 
-  def sizes
-    @sizes
+  def small_dirs
+    @sizes.select { |n| n <= 100000 }
   end
 
-  def total_size
-    @sizes[-1]
+  def size_to_delete
+    n = ((70000000 - @sizes[-1]) - 30000000).abs
+    @sizes.select { |size| size > n }.min
   end
 end
 
@@ -45,8 +46,7 @@ end
 tree = DirTree.new("data.txt")
 
 # part 1
-puts tree.sizes.select { |size| size <= 100000 }.sum
+puts tree.small_dirs.sum
 
 # part 2
-size_to_delete = ((70000000 - tree.total_size) - 30000000).abs
-puts tree.sizes.select { |size| size > size_to_delete }.min
+puts tree.size_to_delete
