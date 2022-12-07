@@ -1,7 +1,21 @@
 class DirTree
-  def initialize
+  def initialize(file : String)
     @dirs = [] of Int32
     @sizes = [] of Int32
+
+    # build directory tree
+    File.each_line(file) do |line|
+      case line
+      when .match(/^\$ cd \.\./); pop_dir
+      when .match(/^\$ cd/)     ; push_dir
+      when .match(/^\d+/)       ; add_file line.split[0].to_i
+      end
+    end
+
+    # pop remaining directories
+    until @dirs.empty?
+      pop_dir
+    end
   end
 
   def push_dir
@@ -18,12 +32,6 @@ class DirTree
     @dirs[-1] += size unless @dirs.empty?
   end
 
-  def pop_all
-    until @dirs.empty?
-      pop_dir
-    end
-  end
-
   def sizes
     @sizes
   end
@@ -33,27 +41,8 @@ class DirTree
   end
 end
 
-tree = DirTree.new
-
-# build directory tree
-File.each_line("data.txt") do |line|
-  parts = line.split
-
-  if parts[0] == "$"
-    if parts[1] == "cd"
-      if parts[2] == ".."
-        tree.pop_dir
-      else
-        tree.push_dir
-      end
-    end
-  elsif parts[0] != "dir"
-    tree.add_file parts[0].to_i
-  end
-end
-
-# pop all remaining dirs
-tree.pop_all
+# walk the output
+tree = DirTree.new("data.txt")
 
 # part 1
 puts tree.sizes.select { |size| size <= 100000 }.sum
