@@ -1,3 +1,9 @@
-File.each_line("test.txt") do |line|
-  # TODO:
+class Day11
+  def initialize(file : String)
+    File.each_line(file) do |line|
+      # TODO:
+    end
+  end
 end
+
+day = Day11.new("test.txt")

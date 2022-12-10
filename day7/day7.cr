@@ -1,4 +1,4 @@
-class DirTree
+class Day7
   def initialize(file : String)
     @dirs = [] of Int32
     @sizes = [] of Int32
@@ -43,10 +43,7 @@ class DirTree
 end
 
 # walk the output
-tree = DirTree.new("data.txt")
+day = Day7.new("data.txt")
 
-# part 1
-puts tree.small_dirs.sum
-
-# part 2
-puts tree.size_to_delete
+puts day.small_dirs.sum
+puts day.size_to_delete
