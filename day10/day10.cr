@@ -7,12 +7,9 @@ class Day10
     @signal = 0
 
     File.each_line(file) do |line|
-      cmd = line.split
-
-      case cmd[0]
-      when "noop"; step
-      when "addx"; step; step; @x += cmd[1].to_i
-      else         raise Exception.new("ACK")
+      case line.match /addx (-?\d+)/
+      when .nil?; step
+      else        step; step; @x += $1.to_i
       end
     end
 
