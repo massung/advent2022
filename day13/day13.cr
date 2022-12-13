@@ -7,12 +7,13 @@ class Val
   def initialize(@x : Int32 | Array(Val))
   end
 
-  def is_int? : Bool
-    @x.is_a?(Int32)
+  def push(x : Val)
+    @x.as(Array(Val)) << x
+    self
   end
 
   def <=>(other : Val) : Int32
-    case {is_int?, other.is_int?}
+    case {@x.is_a?(Int32), other.x.is_a?(Int32)}
     when {true, true} ; @x.as(Int32) <=> other.x.as(Int32)
     when {true, false}; Val.new([Val.new(@x)]) <=> other
     when {false, true}; self <=> Val.new([Val.new(other.x)])
@@ -25,11 +26,8 @@ class Val
       when {false, true}; return 1
       when {true, true} ; return 0
       else
-        case xs[0] <=> ys[0]
-        when -1; return -1
-        when  1; return 1
-        else     Val.new(xs[1..]) <=> Val.new(ys[1..])
-        end
+        cmp = xs[0] <=> ys[0]
+        cmp != 0 ? cmp : Val.new(xs[1..]) <=> Val.new(ys[1..])
       end
     end
   end
@@ -42,30 +40,25 @@ class Day13
     lines = File.read_lines(file)
 
     (0...lines.size).step(by: 3).each do |i|
-      a, _ = parse_list(lines[i])
-      b, _ = parse_list(lines[i + 1])
-
-      @lists << {a, b}
+      @lists << {parse_val(lines[i]), parse_val(lines[i + 1])}
     end
   end
 
-  def parse_list(line : String, i : Int32 = 1) : Tuple(Val, Int32)
-    xs = [] of Val
+  def parse_val(s : String) : Val
+    val : Val = Val.new([] of Val)
+    stack = [] of Val
+    i = 0
 
-    until line[i] == ']'
-      case line[i..]
-      when .matches?(/^\[/)
-        ys, i = parse_list(line, i + 1)
-        xs << ys
-      when .match(/^\d+/)
-        xs << Val.new($0.to_i)
-        i += $0.size
-      else
-        i += 1
+    until i >= s.size
+      case s[i..]
+      when .match(/^\[/) ; i += 1; stack << val; val = Val.new([] of Val)
+      when .match(/^\]/) ; i += 1; val = stack.pop.push(val)
+      when .match(/^\d+/); i += $0.size; val.push(Val.new($0.to_i))
+      else                 i += 1
       end
     end
 
-    {Val.new(xs), i + 1}
+    val
   end
 
   def part1
@@ -73,8 +66,8 @@ class Day13
   end
 
   def part2
-    two, _ = parse_list("[[2]]")
-    six, _ = parse_list("[[6]]")
+    two = parse_val("[[2]]")
+    six = parse_val("[[6]]")
 
     xs = [two, six] of Val
 
