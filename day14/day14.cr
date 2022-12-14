@@ -10,23 +10,14 @@ class Day14
     File.each_line(file) do |line|
       pts = line.split(" -> ").map(&.split(",").map &.to_i)
       
-      # start of line segment
-      x1, y1 = pts[0][0], pts[0][1]
-
-      # rest of segments
-      pts[1..].each do |p|
-        x2, y2 = p[0], p[1]
-        
-        # sort for ranges
-        x1, x2 = (x1 < x2) ? {x1, x2} : {x2, x1}
-        y1, y2 = (y1 < y2) ? {y1, y2} : {y2, y1}
-        
-        # set rocks
+      # A -> B, B -> C, C -> D, ...
+      pts.each_cons_pair do |p1, p2|
+        x1, x2 = p1[0] < p2[0] ? {p1[0], p2[0]} : {p2[0], p1[0]}
+        y1, y2 = p1[1] < p2[1] ? {p1[1], p2[1]} : {p2[1], p1[1]}
+       
+        # place rocks
         (x1..x2).each {|x| @walls << {x, y1}}
         (y1..y2).each {|y| @walls << {x1, y}}
-
-        # update pos
-        x1, y1 = p[0], p[1]
       end
     end
     
@@ -54,22 +45,13 @@ class Day14
       end
     end
     
-    # place the sand
+    # place the sand and return the position of it
     @sand << {x, y}
-    
-    # return the position
     {x, y}
   end
   
-  def drop_until(&pred : (Tuple(Int32, Int32)) -> Bool) : Int32
-    n = 0
-    
-    # keep dropping..
-    until pred.call(drop_sand)
-      n += 1
-    end
-    
-    n
+  def drop_until(&pred : (Tuple(Int32, Int32)) -> Bool) : Int32    
+    (0..).index {|_| pred.call(drop_sand)}.not_nil!
   end
   
   def part1
