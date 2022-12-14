@@ -11,9 +11,9 @@ class Day14
       pts = line.split(" -> ").map(&.split(",").map &.to_i)
       
       # A -> B, B -> C, C -> D, ...
-      pts.each_cons_pair do |p1, p2|
-        x1, x2 = p1[0] < p2[0] ? {p1[0], p2[0]} : {p2[0], p1[0]}
-        y1, y2 = p1[1] < p2[1] ? {p1[1], p2[1]} : {p2[1], p1[1]}
+      pts.each_cons_pair do |a, b|
+        x1, x2 = a[0] < b[0] ? {a[0], b[0]} : {b[0], a[0]}
+        y1, y2 = a[1] < b[1] ? {a[1], b[1]} : {b[1], a[1]}
        
         # place rocks
         (x1..x2).each {|x| @walls << {x, y1}}
