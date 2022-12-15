@@ -9,7 +9,7 @@ class Day15
     @beacons = Set(Pt).new
     
     File.each_line(file) do |line|
-      xys = line.scan(/\d+/).map &.[0].to_i
+      xys = line.scan(/-?\d+/).map &.[0].to_i
 
       a = {x: xys[0], y: xys[1]}
       b = {x: xys[2], y: xys[3]}
