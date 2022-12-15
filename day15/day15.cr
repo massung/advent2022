@@ -32,25 +32,24 @@ class Day15
     (x1..x2)
   end
   
-  def ranges_overlap?(r : Range(Int32, Int32), e : Range(Int32, Int32)) : Bool
-    e.includes?(r.begin) || e.includes?(r.end) || r.includes?(e.begin) || r.includes?(e.end)
+  def visible_ranges(y : Int32) : Array(Range(Int32, Int32))
+    @sensors.map { |sensor| visible_range(sensor, y) }.sort_by! &.begin
   end
   
   def merged_ranges(y : Int32) : Array(Range(Int32, Int32))
-    rs = Array(Range(Int32, Int32)).new(@sensors.size)
+    rs = visible_ranges(y)
+    i = 0
     
-    @sensors.each do |sensor|
-      r = visible_range(sensor, y)
-      
-      # does this overlap an existing range?
-      if i = rs.index { |e| ranges_overlap?(r, e) }
-        rs[i] = Math.min(r.begin, rs[i].begin)..Math.max(r.end, rs[i].end)
+    # merge overlapping ranges together
+    (1...rs.size).each do |j|
+      if rs[j].begin <= rs[i].end + 1
+        rs[i] = rs[i].begin..Math.max(rs[i].end, rs[j].end)
       else
-        rs << r
+        rs[i += 1] = rs[j]
       end
     end
     
-    rs.sort_by! &.begin
+    rs.truncate(0, i + 1)
   end
   
   def part1(y : Int32) : Int32
@@ -61,14 +60,11 @@ class Day15
   
   def part2(extent : Int32) : BigInt?
     (0..extent).each do |y|
-      rs = merged_ranges(y).each
-      x = 0
-
-      while x <= extent
-        case r = rs.next
-        in Iterator::Stop; return BigInt.new(x) * 4000000 + y 
-        in Range(Int32, Int32); x = r.end + 1 if r.includes?(x)
-        end
+      rs = merged_ranges(y)
+      
+      # if there's no free space, the first range will consume the entire area
+      unless rs[0].includes?(0) && rs[0].includes?(extent)
+        return BigInt.new(rs[0].end+1) * 4000000 + y 
       end
     end
   end
