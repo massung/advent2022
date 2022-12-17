@@ -90,7 +90,6 @@ class Day16
   def part1
     initial_state = {valve: "AA", total: 0, rate: 0, time: 30}
     states = [{initial_state, @paths}]
-    best_time = initial_state[:time]
     best_flow = 0
 
     until states.empty?
@@ -101,17 +100,17 @@ class Day16
 
       # is this the best rate so far?
       if flow > best_flow
-        puts "#{best_flow = flow} @ #{best_time = s[:time]}   (#{states.size})"
+        puts "#{best_flow = flow}   (#{states.size})"
       end
 
       nodes_left.each do |to|
         nst = walk_to(s, to)
 
-        # is this new state even good enough?
-        next if score(nst) < best_flow // 2 && nst[:time] < 15
+        # don't look at a spot too far away to move to next
+        next if nst[:time] < 0 || s[:time] - nst[:time] > 6
 
         # next state from this one
-        states << {nst, nodes_left - Set{to}} if nst[:time] > 0
+        states << {nst, nodes_left - Set{to}}
       end
     end
 
@@ -121,40 +120,34 @@ class Day16
   def part2
     initial_state = {valve: "AA", total: 0, rate: 0, time: 26}
     states = [{initial_state, initial_state,  @paths}]
-    best_time = initial_state[:time]
     best_flow = 0
+    count = 0
 
     until states.empty?
       a, b, nodes_left = states.sort_by! {|s| -(s[0][:time]+s[1][:time])}.pop
 
       # calculate the total flow
-      time = a[:time] + b[:time]
       flow = score(a) + score(b)
+      count += 1
 
       # is this the best rate so far?
       if flow > best_flow
-        puts "#{best_flow = flow} @ #{best_time = time}   (#{states.size})"
+        puts "#{best_flow = flow}   (#{states.size})   (#{count})"
       end
 
       # select the next set of possible paths to go to
-      nodes_left.to_a.permutations(2).each do |n|
+      nodes_left.to_a.each_permutation(2) do |n|
         x, y = n[0], n[1]
 
         # walk from a -> x and b -> y
         na = walk_to(a, x)
         nb = walk_to(b, y)
 
-        # was this a valid option?
-        if na[:time] >= 0 && nb[:time] >= 0
-          time = na[:time] + nb[:time]
-          flow = score(na) + score(nb)
+        next if na[:time] < 0 || a[:time] - na[:time] > 6
+        next if nb[:time] < 0 || b[:time] - nb[:time] > 6
 
-          # is this new state even good enough?
-          next if flow < best_flow // 2 && time < best_time // 2
-
-          # push next state
-          states << {na, nb, nodes_left - Set{x, y}}
-        end
+        # push next state
+        states << {na, nb, nodes_left - Set{x, y}}
       end
     end
 
@@ -162,7 +155,7 @@ class Day16
   end
 end
 
-day = Day16.new("test.txt")
+day = Day16.new("data.txt")
 
 puts day.part1
 puts day.part2
