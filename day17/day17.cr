@@ -41,7 +41,14 @@ class Day17
     height = 0_i64
     y = 0_i64
     stack = [] of Int32
-    cycle = [{top: 0xfe, rock_index: first_rock, istep: istep, rocks: 0_i64, height: height}]
+
+    # find repeating cycles {top, rock_index, wind_index} -> {i, height}
+    cycles = Hash(Tuple(Int32, Int64, Int64), Array(Tuple(Int64, Int64))).new do |h, k|
+      [] of {Int64, Int64}
+    end
+
+    # bottom cycle start
+    cycles[{0xfe, 0_i64, 0_i64}] = [{0_i64, 0_i64}]
 
     while i < n + first_rock
       rock_index = i%5
@@ -50,38 +57,46 @@ class Day17
       iy = y = height + 3
       istep = step % @wind.size
 
-      # before we start dropping the rock, see if it's a cycle!
-      if stack.size > 1 && stack[-1] == 0xfe
-        top = stack[-1]
-        #puts "checking for cycle... step=#{step}"
+      # search for a cycle
+      if stack.size > 1
+        cycles[{stack[-1], rock_index, istep}]?.try do |c|
+          if c.size > 2
+            ia = c[-2][0] - c[-3][0]  # rocks in earlier stack
+            ib = c[-1][0] - c[-2][0]  # rocks in previous stack
 
-        cycle.rindex(cycle.size - 2) {|x| x[:top] == top && x[:rock_index] == rock_index && x[:istep] == istep}.try do |ix|
-          puts "found cycle!"
+            rng_a = c[-3][1]...c[-2][1]
+            rng_b = c[-2][1]...c[-1][1]
 
-          di = i - cycle[ix][:rocks]          # rocks in the loop
-          dh = height - cycle[ix][:height]    # height of the loop
-          rocks_left = n - i
-          loops = rocks_left // di
-          rem = rocks_left - (loops * di)
+            if ia == ib && rng_a.size == rng_b.size && stack[rng_a] == stack[rng_b]
+              puts "found cycle!"
 
-          puts "rocks in loop: #{di}"
-          puts "height of loop: #{dh}"
-          puts "rocks left to place: #{rocks_left}"
-          puts "loops that will be placed: #{loops}"
-          puts "remainder of rocks: #{rem}"
-          puts "verify: #{i + (loops * di) + rem == n}"
+              # calculate everything
+              di = ia
+              dh = rng_a.size
+              rocks_left = n - i
+              loops = rocks_left // di
+              rem = rocks_left - (loops * di)
 
-          # all all the loops to the current height (stack needn't be updated)
-          height += dh * loops
+              puts "rocks in loop: #{di}"
+              puts "height of loop: #{dh}"
+              puts "rocks left to place: #{rocks_left}"
+              puts "loops that will be placed: #{loops}"
+              puts "remainder of rocks: #{rem}"
+              puts "verify: #{i + (loops * di) + rem == n}"
 
-          # add all the rocks that were placed
-          i += loops * di
+              # all all the loops to the current height (stack needn't be updated)
+              height += dh * loops
 
-          puts "height after loops: #{height}"
-          puts "simulating remainging rocks..."
+              # add all the rocks that were placed
+              i += loops * di
 
-          # recurse to simulate the remainder
-          return height + run(rem, rock_index, istep)
+              puts "height after loops: #{height}"
+              puts "simulating remaining rocks..."
+
+              # recurse to simulate the remainder
+              return height + run(rem, rock_index, istep)
+            end
+          end
         end
       end
 
@@ -111,17 +126,10 @@ class Day17
             y += 1
           end
 
-          # only keep the top N rows on the stack
-          stack.truncate(-1000..) if stack.size > 10000
-
-          # push cycle info for the NEXT rock
-          cycle << {
-            top: stack[-1],
-            rock_index: (i+1)%5,
-            istep: step%@wind.size,
-            rocks: i+1,
-            height: height,
-          }
+          # add the NEXT rock to the cycle cache
+          cycles.update({stack[-1], (i+1)%5, step%@wind.size}) do |xs|
+            xs << {i+1, height}
+          end
 
           # next rock
           break
@@ -147,7 +155,7 @@ class Day17
   end
 end
 
-day = Day17.new("data.txt")
+day = Day17.new("test.txt")
 
 puts day.part1
 puts day.part2
