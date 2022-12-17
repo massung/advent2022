@@ -5,17 +5,12 @@ def score(s : State) : Int32
   s[:total] + s[:rate] * s[:time]
 end
 
-def apply_delta(s : State, d : State) : State
-  {valve: d[:valve], total: s[:total]+d[:total], rate: s[:rate]+d[:rate], time: s[:time]+d[:time]}
-end
-
 class Day16
   @paths : Set(String)
 
   def initialize(file : String)
     @valves = Hash(String, Valve).new
     @graph = Hash(Tuple(String, String), Int32).new
-    @deltas = Hash(Tuple(String, Array(String)), State).new
 
     # parse input
     File.each_line(file) do |line|
@@ -31,26 +26,6 @@ class Day16
 
     # all possible destination valves
     @paths = Set(String).new(@valves.select {|k,v| v[:rate] > 0}.keys)
-
-    # pre-cache every 2, 3, 4, and 5-length path between valves
-    #build_graph_deltas
-  end
-
-  def build_graph_deltas
-    (2..5).each do |n|
-      @paths.each do |from|
-        initial_state = {valve: from, total: 0, rate: 0, time: 0}
-
-        @paths.to_a.each_permutation(n) do |path|
-          next if path.includes?(from)
-
-          # calculate the delta state to apply later
-          @deltas[{from, path}] = path.reduce(initial_state) do |s, to|
-            walk_to(s, to)
-          end
-        end
-      end
-    end
   end
 
   def pathfind(a : String, b : String)
@@ -73,7 +48,7 @@ class Day16
     end
   end
 
-  def walk_to(s : State, to : String) : State
+  def walk_to(s : State, to : String) : State?
     dt = @graph[{s[:valve], to}] + 1
 
     # update total flow
@@ -84,7 +59,7 @@ class Day16
     rate = s[:rate] + @valves[to][:rate]
 
     # new state
-    {valve: to, total: total, rate: rate, time: time}
+    {valve: to, total: total, rate: rate, time: time} if time >= 0
   end
 
   def part1
@@ -100,17 +75,14 @@ class Day16
 
       # is this the best rate so far?
       if flow > best_flow
-        puts "#{best_flow = flow}   (#{states.size})"
+        best_flow = flow
+        #puts "#{best_flow}  (#{states.size})"
       end
 
       nodes_left.each do |to|
-        nst = walk_to(s, to)
-
-        # don't look at a spot too far away to move to next
-        next if nst[:time] < 0 || s[:time] - nst[:time] > 6
-
-        # next state from this one
-        states << {nst, nodes_left - Set{to}}
+        walk_to(s, to).try do |nst|
+          states << {nst, nodes_left - Set{to}}
+        end
       end
     end
 
@@ -121,18 +93,16 @@ class Day16
     initial_state = {valve: "AA", total: 0, rate: 0, time: 26}
     states = [{initial_state, initial_state,  @paths}]
     best_flow = 0
-    count = 0
 
     until states.empty?
       a, b, nodes_left = states.sort_by! {|s| -(s[0][:time]+s[1][:time])}.pop
 
       # calculate the total flow
       flow = score(a) + score(b)
-      count += 1
 
       # is this the best rate so far?
       if flow > best_flow
-        puts "#{best_flow = flow}   (#{states.size})   (#{count})"
+        puts "#{best_flow = flow}   (#{states.size})"
       end
 
       # select the next set of possible paths to go to
@@ -140,14 +110,15 @@ class Day16
         x, y = n[0], n[1]
 
         # walk from a -> x and b -> y
-        na = walk_to(a, x)
-        nb = walk_to(b, y)
+        walk_to(a, x).try do |na|
+          walk_to(b, y).try do |nb|
+            next if na[:time] < 0 || a[:time] - na[:time] > 6
+            next if nb[:time] < 0 || b[:time] - nb[:time] > 6
 
-        next if na[:time] < 0 || a[:time] - na[:time] > 6
-        next if nb[:time] < 0 || b[:time] - nb[:time] > 6
-
-        # push next state
-        states << {na, nb, nodes_left - Set{x, y}}
+            # push next state
+            states << {na, nb, nodes_left - Set{x, y}}
+          end
+        end
       end
     end
 
