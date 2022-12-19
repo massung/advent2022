@@ -10,7 +10,7 @@ def initial_state
   {time: 0, res: Resources.new(0), bots: initial_bots}
 end
 
-SUMS = [0] + (1..100).flat_map {|i| [i]*i }
+SUMS = [0] + (1..100).map {|i| (1..i).sum}
 
 class Day19
   def initialize(file : String)
@@ -68,20 +68,10 @@ class Day19
   end
 
   def impossible?(bp : Blueprint, time : Int32, geodes : Int32, st : State) : Bool
-    return false if geodes == 0
+    time_left = time - st[:time]
 
-    # how many geode bots will we need by when?
-    n = SUMS[geodes - st[:res]["geode"]]
-    t = time - n + st[:bots]["geode"]
-
-    # how many obsidian bots will we need to many n geode bots in n turns?
-    if st[:bots]["geode"] == 0
-      n = SUMS[bp["geode"]["obsidian"]]  # needed obsidian bots
-      t = t - n + st[:bots]["obsidian"]
-    end
-
-    # the state must be less than this!
-    st[:time] > t
+    # can enough geodes be harvested in the remaining time?
+    st[:res]["geode"] + st[:bots]["geode"] * time_left + SUMS[time_left] < geodes
   end
 
   def pathfind(bp : Blueprint, time : Int32)
