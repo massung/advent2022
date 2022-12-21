@@ -57,7 +57,6 @@ class Day21
 
     # get the starting value
     n = q.includes?(lhv) ? eval_monkey(rhv) : eval_monkey(lhv)
-    puts "(#{m}) #{n}"
 
     # walk the dependency list
     until q.empty?
