@@ -1,151 +1,109 @@
-alias Op = Tuple(String, Char, String)
-
-class Expr
-  def initialize(@ex : Int128 | Op)
-  end
-
-  def term! : Int128
-    @ex.as(Int128)
-  end
-
-  def term? : Int128?
-    @ex.as?(Int128)
-  end
-
-  def terms : Op
-    @ex.as(Op)
-  end
-end
+alias Expr = {String, Char, String}
 
 class Day21
   def initialize(file : String)
-    @monkeys = Hash(String, Int128 | Op).new
+    @monkeys = Hash(String, Int128 | Expr).new
+    @graph = Hash(String, Array(String)).new { |k| Array(String).new }
 
     File.each_line(file) do |line|
       case line
       when .match(/([a-z]+): ([a-z]+) ([+*\/-]) ([a-z]+)/)
         @monkeys[$1] = {$2, $3[0], $4}
+
+        # add to dependency graph
+        @graph.update($2) {|xs| xs << $1}
+        @graph.update($4) {|xs| xs << $1}
       when .match(/([a-z]+): (\d+)/)
         @monkeys[$1] = $2.to_i
       end
     end
   end
 
-  def eval_monkeys(eval_humn : Bool) : Set(String)
-    humn_deps = Set{"humn"}
-    waiting = true
+  def eval_monkey(name : String) : Int128
+    m = @monkeys[name]
 
-    while waiting
-      waiting = false
+    # already evaluated
+    return m if m.is_a?(Int128)
 
-      @monkeys.each do |k, v|
-        if v.is_a?(Op)
-          left, op, right = v
+    # extract expression
+    lhv, op, rhv = m.as(Expr)
 
-          # check for a humn dependency
-          unless eval_humn
-            if humn_deps.includes?(left) || humn_deps.includes?(right)
-              humn_deps << k
-              next
-            end
-          end
+    # eval left and right values
+    x = eval_monkey(lhv)
+    y = eval_monkey(rhv)
 
-          x = @monkeys[left]
-          y = @monkeys[right]
+    # eval and cache answer
+    case op
+    when '+'; @monkeys[name] = x + y
+    when '-'; @monkeys[name] = x - y
+    when '*'; @monkeys[name] = x * y
+    when '/'; @monkeys[name] = x // y
+    else raise "ACK!"
+    end
+  end
 
-          if x.is_a?(Int128) && y.is_a?(Int128)
-            case op
-            when '+'; @monkeys[k] = x + y
-            when '-'; @monkeys[k] = x - y
-            when '*'; @monkeys[k] = x * y
-            when '/'; @monkeys[k] = x // y
-            end
-          else
-            waiting = true
-          end
+  def find_deps(m : String) : Array(String)
+    deps = @graph[m]
+
+    # recursively find the other dependencies
+    deps + deps.flat_map {|d| find_deps(d)}
+  end
+
+  def calc_humn : Int128
+    q = find_deps("humn")
+
+    # initial equation (m = "root")
+    lhv, _, rhv = @monkeys[m = q.pop].as(Expr)
+
+    # get the starting value
+    n = q.includes?(lhv) ? eval_monkey(rhv) : eval_monkey(lhv)
+    puts "(#{m}) #{n}"
+
+    # walk the dependency list
+    until q.empty?
+      lhv, op, rhv = @monkeys[m = q.pop].as(Expr)
+
+      # figure out which side of the equation the variable is on
+      if q.includes?(lhv) || lhv == "humn"
+        v = eval_monkey(rhv)
+        #print "(#{m}) #{lhv} #{op} #{v} = #{n} "
+
+        # L `op` ? = n
+        case op
+        when '+'; n -= v
+        when '-'; n += v
+        when '*'; n //= v
+        when '/'; n *= v
+        end
+      else
+        v = eval_monkey(lhv)
+        #print "(#{m}) #{v} #{op} #{rhv} = #{n} "
+
+        # ? `op` R = n
+        case op
+        when '+'; n -= v
+        when '-'; n = v - n
+        when '*'; n //= v
+        when '/'; n = v // n
         end
       end
     end
 
-    humn_deps
-  end
-
-  def trace(name : String) : Expr
-    x = @monkeys[name]
-
-    # literal value
-    return Expr.new(x) if x.is_a?(Int128)
-
-    # build expression
-    left, op, right = x
-
-    Expr.new({trace(left), op, trace(right)})
+    # should be the value of HUMN
+    n
   end
 
   def part1
-    eval_monkeys(true)
-    @monkeys["root"]
+    eval_monkey("root")
   end
 
   def part2
-    deps = eval_monkeys(false)
-
-    # start with root, work the expression backwards
-    m = @monkeys["root"]
-
-    # remove the root dependency
-    deps.delete("root")
-
-    # figure out what the final result is
-    left, op, right = m.as(Tuple(String, Char, String))
-
-    if deps.includes?(left)
-      n = @monkeys[right].as(Int128)
-      m = left
-    else
-      n = @monkeys[left].as(Int128)
-      m = right
-    end
-
-    puts "#{m} = #{n}"
-
-    # backtrack the expression
-    until deps.empty?
-      deps.delete(m)
-
-      # inverse expression
-      left, op, right = @monkeys[m].as(Tuple(String, Char, String))
-
-      if deps.includes?(left)
-        x = @monkeys[right].as(Int128)
-        m = left
-
-        # ? `op` x = n
-        case op
-        when '+'; n -= x
-        when '-'; n += x
-        when '*'; n //= x
-        when '/'; n *= x
-        end
-      else
-        x = @monkeys[left].as(Int128)
-        m = right
-
-        # x `op` ? = n
-        case op
-        when '+'; n -= x
-        when '-'; n = x - n
-        when '*'; n //= x
-        when '/'; n = x // n
-        end
-      end
-
-      puts "#{m} = #{n}"
-    end
+    calc_humn
   end
 end
 
 day = Day21.new("data.txt")
 
-#puts day.part1
+# easier to solve in reverse order
 puts day.part2
+puts day.part1
