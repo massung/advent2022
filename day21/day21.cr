@@ -43,10 +43,7 @@ class Day21
   end
 
   def find_deps(m : String) : Array(String)
-    deps = @graph[m]
-
-    # recursively find the other dependencies
-    deps + deps.flat_map {|d| find_deps(d)}
+    @graph[m] + @graph[m].flat_map {|d| find_deps(d)}
   end
 
   def calc_humn : Int128
@@ -104,5 +101,8 @@ end
 day = Day21.new("data.txt")
 
 # easier to solve in reverse order
-puts day.part2
-puts day.part1
+p2 = day.part2
+p1 = day.part1
+
+puts p1
+puts p2
