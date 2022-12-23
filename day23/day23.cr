@@ -120,7 +120,7 @@ class Day23
       turn += 1
     end
 
-    puts turn
+    turn
   end
 end
 
