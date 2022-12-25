@@ -58,6 +58,7 @@ class Day25
   end
 
   def part2
+    "Merry Christmas!!"
   end
 end
 
